@@ -1,0 +1,155 @@
+#!/usr/bin/env python
+"""
+    css_image_concat
+    ~~~~~~~~
+
+    A script that can concat images into one image and create a CSS file.
+    Super useful when you want decrase issuing a lot of HTTP requests
+    due to a lot of small images (like icons).
+
+    This script takes three inputs:
+
+        image_dir: A directory of images
+        out_img: An output path to the concated image
+        out_css: An output path to a CSS file
+
+    Usage is:
+        css_image_concat <image_dir> <out_img> <out_css>
+
+    It will then process all the images of `image_dir` and create one
+    image and one CSS file with classes. The CSS classes have following name:
+
+        cmp_<filename>
+
+    This script requires ImageMagick ( http://imagemagick.org/ )
+
+    :copyright: by Amir Salihefendic ( http://amix.dk/ )
+    :license: MIT
+"""
+
+import os, sys
+import re
+
+
+#--- Main functions ----------------------------------------------
+def help():
+    print 'Usage is:'
+    print '   css_image_concat <image_dir> <out_img> <out_css>'
+    print 'Example:'
+    print '   css_image_concat wedoist/static/web/images/icons wedoist/static/web/images/icons.png wedoist/static/web/css/all_icons.css'
+
+
+def main():
+    image_dir = sys.argv[1]
+    output_image = sys.argv[2]
+    output_css = sys.argv[3]
+
+    images = get_images(image_dir)
+    print 'Parsed %s in %s' % (len(images), image_dir)
+
+    im_name = output_image.split('/')[-1]
+    css = generate_css(images, im_name)
+
+    open(output_css, 'w').write(css)
+    print 'Written CSS file: %s' % output_css
+
+    concat_images(images, output_image)
+    print 'Written image file: %s' % output_image
+    print '----'
+
+
+#--- Globals ----------------------------------------------
+IMAGE_CLASS_URL = """.cmp_%s {
+    background: transparent url(%s) 0 0 no-repeat;
+}"""
+
+IMAGE_CLASS_PROPS = """.cmp_%s {
+    background-position: 0 -%spx;
+    width: %spx;
+    height: %spx;
+    padding: 0 !important;
+}"""
+
+IMAGE_MAGIC_CMD = 'convert -gravity West %s -append %s'
+
+
+#--- Functions ----------------------------------------------
+def get_images(dir):
+    """
+    Finds images in dir and returns them as a list.
+    """
+    img_files = []
+    for root, dirs, files in os.walk(dir):
+        for file in files:
+            if file.find('.gif') != -1 or file.find('.png') != -1:
+                try:
+                    order = int(file.split('_')[0])
+                except ValueError:
+                    order = 0
+                img_files.append((order, file))
+        break
+
+    images = []
+    for count, file in sorted(img_files):
+        info = os.popen('identify %s/%s' % (root, file)).read()
+        m_obj = re.search('(\d+)x(\d+)', info)
+
+        images.append({
+            'path': '%s/%s' % (dir, file),
+            'name': file.split('.')[0],
+            'width': int(m_obj.group(1)),
+            'height': int(m_obj.group(2))
+        })
+
+    return images
+
+
+def generate_css(images, output_image):
+    """
+    Generates CSS for images.
+
+    output_image should be the filename only.
+    """
+    height_offset = 0
+
+    css = []
+
+    for image in images:
+        name = image['name']
+        w = image['width']
+        h = image['height']
+
+        output_image_partial = re.search(".*(/static.*)", sys.argv[2]).group(1)
+
+        css_url = IMAGE_CLASS_URL %\
+                (name, output_image_partial)
+        css.append(css_url)
+
+        css_props = IMAGE_CLASS_PROPS %\
+                (name, height_offset, w, h)
+        css.append(css_props)
+
+        height_offset += image['height']
+    return '\n'.join(css)
+
+
+def concat_images(images, output_image):
+    """
+    Concats images using image magick.
+
+    output should be the full path of the image
+    """
+    try:
+        os.remove(output_image)
+    except:
+        pass
+
+    file_names = [image['path'] for image in images]
+    os.popen(IMAGE_MAGIC_CMD % (' '.join(file_names), output_image))
+
+
+if __name__ == '__main__':
+    if len(sys.argv) != 4:
+        help()
+    else:
+        main()
