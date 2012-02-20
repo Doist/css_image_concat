@@ -59,7 +59,7 @@ def main():
 
 
 #--- Globals ----------------------------------------------
-IMAGE_CLASS_URL = """.cmp_%s {
+IMAGE_CLASS_URL = """%s {
     background: transparent url(%s) 0 0 no-repeat;
 }"""
 
@@ -110,26 +110,30 @@ def generate_css(images, output_image):
 
     output_image should be the filename only.
     """
-    height_offset = 0
+    # Generate the background-image property
+    cmp_classes = []
+    for image in images:
+        cmp_classes.append('.cmp_%s' % image['name'])
 
-    css = []
+    output_image_partial = re.search(".*(/static.*)", sys.argv[2]).group(1)
+    css_url = IMAGE_CLASS_URL %\
+            (', '.join(cmp_classes), output_image_partial)
+
+    # Generate the CSS properties (height, width, background position)
+    height_offset = 0
+    css = [ css_url ]
 
     for image in images:
         name = image['name']
         w = image['width']
         h = image['height']
 
-        output_image_partial = re.search(".*(/static.*)", sys.argv[2]).group(1)
-
-        css_url = IMAGE_CLASS_URL %\
-                (name, output_image_partial)
-        css.append(css_url)
-
         css_props = IMAGE_CLASS_PROPS %\
                 (name, height_offset, w, h)
         css.append(css_props)
 
         height_offset += image['height']
+
     return '\n'.join(css)
 
 
