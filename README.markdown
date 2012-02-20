@@ -7,7 +7,7 @@ due to a lot of small images (like icons).
 
 To install it do following::
 
-    sudo easy_install css_image_concat
+    sudo pip install css_image_concat
 
 This script takes three inputs::
 

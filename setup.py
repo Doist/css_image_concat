@@ -4,7 +4,7 @@ from setuptools import setup
 setup(
     name="css_image_concat",
     license="MIT",
-    version="1.0",
+    version="1.1",
     author="amix",
     author_email="amix@amix.dk",
     url="http://www.amix.dk/",
@@ -30,7 +30,7 @@ due to a lot of small images (like icons).
 
 To install it do following::
 
-    sudo easy_install css_image_concat
+    sudo pip install css_image_concat
 
 This script takes three inputs::
 
