@@ -21,6 +21,11 @@
 
         cmp_<filename>
 
+    The script will also check if there exist a directory  'image_dir@2x'.
+    If it exists, the script will generated another spirit image 'out_img@2x'
+    with all the images in the 'image_dir@2x' concated. The script will also
+    append the associated CSS class to the 'out_css' file
+
     This script requires ImageMagick ( http://imagemagick.org/ )
 
     :copyright: by Amir Salihefendic ( http://amix.dk/ )
@@ -50,12 +55,38 @@ def main():
     im_name = output_image.split('/')[-1]
     css = generate_css(images, im_name)
 
-    open(output_css, 'w').write(css)
     print 'Written CSS file: %s' % output_css
+    with open(output_css, "w") as css_file:
+        css_file.write(css)
 
     concat_images(images, output_image)
     print 'Written image file: %s' % output_image
     print '----'
+
+    retina_image_dir = image_dir + "@2x"
+    if os.path.exists(retina_image_dir):
+        print 'Detected retina image dir'
+
+        retina_images = get_images(retina_image_dir)
+        print 'Parsed %s in %s' % (len(retina_images), retina_image_dir)
+
+        #create path of spirit retina image
+        (file_name_path, file_extension) = os.path.splitext(output_image)
+        output_retina_img_path = file_name_path + "@2x" + file_extension
+
+        retina_css = generate_css_for_retina(retina_images, output_retina_img_path)
+
+        print 'Append Retina image CSS to file: %s' % output_css
+        with open(output_css, "a") as css_file:
+            css_file.write(retina_css)
+
+        print 'Written image file: %s' % output_retina_img_path
+        concat_images(retina_images, output_retina_img_path)
+        print '----'
+
+
+
+
 
 
 #--- Globals ----------------------------------------------
@@ -69,6 +100,29 @@ IMAGE_CLASS_PROPS = """.cmp_%s {
     height: %spx;
     padding: 0 !important;
 }"""
+
+RETINA__MEDIA_QUERY_BEGIN = """
+@media only screen and (-webkit-min-device-pixel-ratio: 2),
+	   only screen and (   min--moz-device-pixel-ratio: 2),
+	   only screen and (     -o-min-device-pixel-ratio: 2/1),
+	   only screen and (        min-device-pixel-ratio: 2),
+	   only screen and (                min-resolution: 192dpi),
+	   only screen and (                min-resolution: 2dppx) {
+"""
+
+RETINA__MEDIA_QUERY_END = """
+}
+"""
+
+RETINA_IMAGE_CLASS_PROPS = """.cmp_%s {
+    background-position: 0 -%spx;
+    background-size: %spx %spx;
+    background-repeat: no-repeat;
+    width: %spx;
+    height: %spx;
+    padding: 0 !important;
+}"""
+
 
 IMAGE_MAGIC_CMD = 'convert -gravity West %s -append %s'
 
@@ -133,6 +187,49 @@ def generate_css(images, output_image):
         css.append(css_props)
 
         height_offset += image['height']
+
+    return '\n'.join(css)
+
+
+def generate_css_for_retina(images, output_image_path):
+    # Generate the background-image property
+    cmp_classes = []
+    for image in images:
+        cmp_classes.append('.cmp_%s' % image['name'])
+
+    # change file name to @2x
+    output_image_partial_path = re.search(".*(/static.*)", output_image_path).group(1)
+
+    css_url = IMAGE_CLASS_URL % \
+              (', '.join(cmp_classes), output_image_partial_path)
+
+    # Generate the CSS properties (height, width, background position)
+    height_offset = 0
+    css = [ RETINA__MEDIA_QUERY_BEGIN, css_url ]
+
+
+    total_width = max([image['width'] for image in images])
+    total_height = sum([image['height'] for image in images])
+    background_size = ((total_width / 2), (total_height / 2))
+
+    for image in images:
+        name = image['name']
+        img_w = image['width']
+        img_h = image['height']
+
+        css_props = (RETINA_IMAGE_CLASS_PROPS %
+                     (name,
+                      height_offset,
+                      background_size[0],
+                      background_size[1],
+                      (img_w / 2),
+                      (img_h / 2)))
+
+        css.append(css_props)
+
+        height_offset += img_h
+
+    css.append(RETINA__MEDIA_QUERY_END)
 
     return '\n'.join(css)
 
