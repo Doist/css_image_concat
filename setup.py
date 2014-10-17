@@ -4,7 +4,7 @@ from setuptools import setup
 setup(
     name="css_image_concat",
     license="MIT",
-    version="1.2",
+    version="2.0",
     author="amix",
     author_email="amix@amix.dk",
     url="http://www.amix.dk/",
