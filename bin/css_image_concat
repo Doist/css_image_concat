@@ -227,7 +227,7 @@ def generate_css_for_retina(images, output_image_path):
 
         css.append(css_props)
 
-        height_offset += img_h
+        height_offset += (img_h / 2)
 
     css.append(RETINA__MEDIA_QUERY_END)
 
