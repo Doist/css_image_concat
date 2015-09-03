@@ -124,7 +124,7 @@ RETINA_IMAGE_CLASS_PROPS = """.cmp_%s {
 }"""
 
 
-IMAGE_MAGIC_CMD = 'convert -gravity West %s -append %s'
+IMAGE_MAGIC_CMD = 'convert -background transparent -gravity West %s -append %s'
 
 
 #--- Functions ----------------------------------------------
